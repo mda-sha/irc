@@ -4,11 +4,11 @@
 #include <sys/types.h>
 #include <sys/poll.h>
 #include <iostream>
-// #include <netinet/in.h>
 #include <unistd.h>
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <vector>
+#include <sys/fcntl.h>
 
 // #include <netinet/in.h>
 // #include <arpa/inet.h>
@@ -47,7 +47,7 @@ std::vector<std::string> splitString(std::string buf)
     return strings;
 }
 
-void whichCmd(std::vector<Client*> clients, char *buf)
+void whichCmd(char *buf)
 {
     std::vector<std::string> cmd = splitString(buf);
     std::cout << cmd[0] << std::endl;
@@ -56,7 +56,7 @@ void whichCmd(std::vector<Client*> clients, char *buf)
 
 int main()
 {
-    int port = 1666;
+    int port = 1661;
     sockaddr_in addr;
 
     if (port < 1024)
@@ -64,7 +64,7 @@ int main()
         std::cout << "port is reserved" << std::endl;
         return 1;
     }
-    // addr.sin_addr.S_un.S_addr = INADDR_ANY;
+    addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(port);
 	addr.sin_family = AF_INET;
     inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr);
@@ -75,19 +75,23 @@ int main()
         std::cout << "*" << std::endl;
     if (listen(sock, SOMAXCONN) == -1)
         std::cout << "*" << std::endl;
+	fcntl(sock, F_SETFL, O_NONBLOCK); /////////////////////
 
 
     std::vector<struct pollfd> fds;
-    std::vector<Client*> clients;
+    // std::vector<Client*> clients;
     while (1)
     {
-        sockaddr_in client;
-        socklen_t clientSize = sizeof(client);
-        int clientSocket = accept(sock, (struct sockaddr*)&client, &clientSize);
+        // sockaddr_in client;
+        socklen_t clientSize = sizeof(addr);
+        int clientSocket = accept(sock, (struct sockaddr*)&addr, &clientSize);
         if (clientSocket >= 0)
         {
-            clients.push_back(new Client(clientSocket));
-            pollfd b;
+    		char	host[INET_ADDRSTRLEN];/////
+	    	inet_ntop(AF_INET, &(addr.sin_addr), host, INET_ADDRSTRLEN); ////
+
+           // clients.push_back(new Client(clientSocket));
+            struct pollfd b;
             b.fd = clientSocket;
             b.events = POLLIN;
             b.revents = 0;
@@ -95,7 +99,7 @@ int main()
             std::cout << "clientSocket = " << clientSocket << std::endl;
         }
 
-        int a = poll(fds.data(), fds.size(), 100000); ////// если а = 0, то пинг понг
+        int a = poll(fds.data(), fds.size(), 1000);
         if (a > 0)
         {
             for (int i = 0; i < fds.size(); i++)
@@ -107,29 +111,12 @@ int main()
                     int bytesRecv;
                     while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
                     {
-                        whichCmd(clients, buf);
+                        whichCmd(buf);
                     }
                     fds[i].revents = 0;
                 }
             }
         }
-        std::cout << "a = " << a << std::endl;
-        //     char buf[4096];
-        //     // while(1)
-        //     // {
-        //         memset(buf, 0, 4096);
-        //         int byteRecv = recv(clientSocket, buf, 4096, 0);
-        //         if (byteRecv < 1)
-        //         {
-        //             std::cout << "**" << std::endl;
-        //             break;
-        //         }
-        //         std::cout << "recieved: " << std::string(buf, 0, byteRecv) << std::endl;
-        //         whichCmd(clients, buf);
-        //         send(clientSocket, buf, byteRecv + 1, 0);
-        //     // }
-        //     // close(clientSocket);
-        // // }
     }
     close(sock);
 }
