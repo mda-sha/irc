@@ -15,13 +15,37 @@
 // #include <cstdlib>
 
 
+std::string g_password = "puk";
+
 class Client
 {
 public:
     std::string name;
     std::string nick;
     int clientSocket;
-    Client(int sock) : clientSocket(sock) {}
+
+private:
+    std::string password;
+    bool isAutorized;
+
+
+public:
+    Client(int sock) : clientSocket(sock)
+    {
+        isAutorized = 0;
+    }
+    void setPassword(std::string const &password) { this->password = password; } 
+    void setNick(std::string const &nick)  { this->nick = nick; }
+    void setName(std::string const &name) { this->name = name; }
+    void checkIfAutorized()
+    {
+        if ((password == g_password + "\n") && name.length() > 0 && nick.length() > 0)
+            isAutorized = true;
+    }
+    bool getIsAutorized()
+    {
+        return isAutorized;
+    }
 };
 
 std::vector<std::string> splitString(std::string buf)
@@ -47,16 +71,41 @@ std::vector<std::string> splitString(std::string buf)
     return strings;
 }
 
-void whichCmd(char *buf)
+void getAuthorized(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
+{
+    if (cmd[0] == "PASSWORD")
+    {
+        std::cout << "command PASSWORD defined" << std::endl;
+        clients[i]->setPassword(cmd[1]);
+    }
+    if (cmd[0] == "NAME")
+        clients[i]->setName(cmd[1]);
+    if (cmd[0] == "NICK")
+        clients[i]->setNick(cmd[1]);
+    clients[i]->checkIfAutorized();
+}
+
+void whichCmd(char *buf, int i, std::vector<Client*> clients)
 {
     std::vector<std::string> cmd = splitString(buf);
-    std::cout << cmd[0] << std::endl;
-    std::cout << cmd[1] << std::endl;
+    std::cout << cmd[0] << "     *     " << clients[i]->clientSocket << std::endl;
+    // std::cout << cmd[1] << std::endl;
+    if (!clients[i]->getIsAutorized())
+        getAuthorized(cmd, i, clients);
+    // else
+    // {
+    //     // другие команды
+    // }
+    if (clients[i]->getIsAutorized())
+        std::cout << "client is authorized" << std::endl;
+    else
+        std::cout << "client is not authorized" << std::endl;
+    
 }
 
 int main()
 {
-    int port = 1661;
+    int port = 1659;
     sockaddr_in addr;
 
     if (port < 1024)
@@ -75,11 +124,11 @@ int main()
         std::cout << "*" << std::endl;
     if (listen(sock, SOMAXCONN) == -1)
         std::cout << "*" << std::endl;
-	fcntl(sock, F_SETFL, O_NONBLOCK); /////////////////////
+	fcntl(sock, F_SETFL, O_NONBLOCK); ///////////////////// разобраться, что это. без этого не работает
 
 
     std::vector<struct pollfd> fds;
-    // std::vector<Client*> clients;
+    std::vector<Client*> clients;
     while (1)
     {
         // sockaddr_in client;
@@ -87,10 +136,10 @@ int main()
         int clientSocket = accept(sock, (struct sockaddr*)&addr, &clientSize);
         if (clientSocket >= 0)
         {
-    		char	host[INET_ADDRSTRLEN];/////
-	    	inet_ntop(AF_INET, &(addr.sin_addr), host, INET_ADDRSTRLEN); ////
+    		// char	host[INET_ADDRSTRLEN];/////
+	    	// inet_ntop(AF_INET, &(addr.sin_addr), host, INET_ADDRSTRLEN); ////
 
-           // clients.push_back(new Client(clientSocket));
+            clients.push_back(new Client(clientSocket));
             struct pollfd b;
             b.fd = clientSocket;
             b.events = POLLIN;
@@ -111,7 +160,7 @@ int main()
                     int bytesRecv;
                     while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
                     {
-                        whichCmd(buf);
+                        whichCmd(buf, i, clients);
                     }
                     fds[i].revents = 0;
                 }
