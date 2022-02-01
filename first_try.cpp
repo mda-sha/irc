@@ -78,6 +78,9 @@ public:
 
     bool getAway() { return away; }
 
+    std::string &getUsername() { return username; }
+    std::string &getRealname() { return realname; }
+
     void setPassword(std::string const &pass, std::vector<Client*> clients, int i)
     {
         if (pass.length() == 0)
@@ -210,7 +213,7 @@ void getRegistered(std::vector<std::string> cmd, int i, std::vector<Client*> cli
 }
 
 
-void privmsg(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
+void privmsg(std::vector<std::string> cmd, std::vector<Client*> clients, int i, bool notice)
 {
     std::vector<int> ind;
     std::vector<std::string>::iterator it_cmd = cmd.begin() + 1;
@@ -242,7 +245,7 @@ void privmsg(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
         send(clients[*it_ind]->clientSocket, ": ", 2, 0);
         send(clients[*it_ind]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
         send(clients[*it_ind]->clientSocket, "\n", 1, 0);
-        if (clients[*it_ind]->getAway())
+        if (clients[*it_ind]->getAway() && !notice)
         {
             std::string resp = clients[*it_ind]->getNick();
             std::string msg = clients[*it_ind]->getAwayMsg();
@@ -267,6 +270,44 @@ void away(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
     clients[i]->setAwayMsg(makeStringAfterPrefix(cmd));
 }
 
+void userhost(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
+{
+    if (cmd.size() == 1)
+    {
+        send(clients[i]->clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+        return;
+    }
+    int params = 5;
+    std::string tmp;
+    std::vector<std::string>::iterator it_cmd = cmd.begin() + 1;
+    std::vector<std::string>::iterator ite_cmd = cmd.end();
+    while (params-- && it_cmd != ite_cmd)
+    {
+        std::vector<Client*>::iterator it_cl = clients.begin();
+        std::vector<Client*>::iterator ite_cl = clients.end();
+        while (it_cl != ite_cl)
+        {
+            if (*it_cmd == (*it_cl)->getNick())
+            {
+                tmp = (*it_cl)->getNick();
+                send(clients[i]->clientSocket, "Nickname: ", 10, 0);
+                send(clients[i]->clientSocket, tmp.c_str(), tmp.size(), 0);
+                send(clients[i]->clientSocket, "\n", 1, 0);
+                send(clients[i]->clientSocket, "Username: ", 10, 0);
+                tmp = (*it_cl)->getUsername();
+                send(clients[i]->clientSocket, tmp.c_str(), tmp.size(), 0);
+                send(clients[i]->clientSocket, "\n", 1, 0);
+                send(clients[i]->clientSocket, "Real name: ", 11, 0);
+                tmp = (*it_cl)->getRealname();
+                send(clients[i]->clientSocket, tmp.c_str(), tmp.size(), 0);
+                send(clients[i]->clientSocket, "\n\n", 2, 0);
+            }
+            it_cl++;
+        }
+        it_cmd++;
+    }
+}
+
 void whichCmd(char *buf, int i, std::vector<Client*> clients)
 {
     std::string tmp = buf;
@@ -280,9 +321,13 @@ void whichCmd(char *buf, int i, std::vector<Client*> clients)
     else
     {
         if (cmd[0] == "PRIVMSG")
-            privmsg(cmd, clients, i);
+            privmsg(cmd, clients, i, false);
         if (cmd[0] == "AWAY")
-            away(cmd,clients, i);
+            away(cmd, clients, i);
+        if (cmd[0] == "NOTICE")
+            privmsg(cmd, clients, i, true);
+        if (cmd[0] == "USERHOST")
+            userhost(cmd, clients, i);
     }
 
 }
