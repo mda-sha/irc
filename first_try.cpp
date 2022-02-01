@@ -53,17 +53,30 @@ public:
 private:
     bool isAutorized;
     bool password;
+    bool away;
     std::string username;
     std::string realname;
     std::string nick;
+    std::string away_msg;
 public:
     Client(int sock) : clientSocket(sock)
     {
         isAutorized = 0;
+        away = 0;
         nick.clear();
         realname.clear();
         username.clear();
     }
+
+    void setAwayMsg(std::string const &str) { away_msg = str; }
+    std::string getAwayMsg() { return away_msg; }
+
+    void setAway(bool t_f)
+    {
+        away = t_f;
+    }
+
+    bool getAway() { return away; }
 
     void setPassword(std::string const &pass, std::vector<Client*> clients, int i)
     {
@@ -229,8 +242,29 @@ void privmsg(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
         send(clients[*it_ind]->clientSocket, ": ", 2, 0);
         send(clients[*it_ind]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
         send(clients[*it_ind]->clientSocket, "\n", 1, 0);
+        if (clients[*it_ind]->getAway())
+        {
+            std::string resp = clients[*it_ind]->getNick();
+            std::string msg = clients[*it_ind]->getAwayMsg();
+            send(clients[i]->clientSocket, "Automatic respond from ", 24, 0);
+            send(clients[i]->clientSocket, resp.c_str(), resp.size(), 0);
+            send(clients[i]->clientSocket, ": ", 2, 0);
+            send(clients[i]->clientSocket, msg.c_str(), msg.size(), 0);
+            send(clients[i]->clientSocket, "\n", 1, 0);
+        }
         ++it_ind;
     }
+}
+
+void away(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
+{
+    if (cmd.size() == 1)
+    {
+        clients[i]->setAway(false);
+        return;
+    }
+    clients[i]->setAway(true);
+    clients[i]->setAwayMsg(makeStringAfterPrefix(cmd));
 }
 
 void whichCmd(char *buf, int i, std::vector<Client*> clients)
@@ -247,6 +281,8 @@ void whichCmd(char *buf, int i, std::vector<Client*> clients)
     {
         if (cmd[0] == "PRIVMSG")
             privmsg(cmd, clients, i);
+        if (cmd[0] == "AWAY")
+            away(cmd,clients, i);
     }
 
 }
