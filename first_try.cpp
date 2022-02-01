@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <vector>
 #include <sys/fcntl.h>
+#include <cstring>
 
 // #include <netinet/in.h>
 // #include <arpa/inet.h>
@@ -34,12 +35,20 @@ public:
     {
         isAutorized = 0;
     }
-    void setPassword(std::string const &password) { this->password = password; } 
+
+    void setPassword(std::string const &pass)
+    {
+        if (pass.length() == 0)
+            std::cout << "ERR_NEEDMOREPARAMS" << std::endl;
+        if (isAutorized)
+            std::cout << "ERR_ALREADYREGISTRED" << std::endl;
+        this->password = pass;
+    } 
     void setNick(std::string const &nick)  { this->nick = nick; }
     void setName(std::string const &name) { this->name = name; }
     void checkIfAutorized()
     {
-        if ((password == g_password + "\n") && name.length() > 0 && nick.length() > 0)
+        if ((password == g_password) && name.length() > 0 && nick.length() > 0)
             isAutorized = true;
     }
     bool getIsAutorized()
@@ -71,41 +80,30 @@ std::vector<std::string> splitString(std::string buf)
     return strings;
 }
 
-void getAuthorized(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
+
+void whichCmd(char *buf, int i, std::vector<Client*> clients)
 {
-    if (cmd[0] == "PASSWORD")
-    {
-        std::cout << "command PASSWORD defined" << std::endl;
+    std::string tmp = buf;
+    tmp.erase(tmp.size() - 1);
+    tmp.append("\0");
+    std::vector<std::string> cmd = splitString(tmp);
+    if (cmd[0] == "PASS")
         clients[i]->setPassword(cmd[1]);
-    }
     if (cmd[0] == "NAME")
         clients[i]->setName(cmd[1]);
     if (cmd[0] == "NICK")
         clients[i]->setNick(cmd[1]);
     clients[i]->checkIfAutorized();
-}
 
-void whichCmd(char *buf, int i, std::vector<Client*> clients)
-{
-    std::vector<std::string> cmd = splitString(buf);
-    std::cout << cmd[0] << "     *     " << clients[i]->clientSocket << std::endl;
-    // std::cout << cmd[1] << std::endl;
-    if (!clients[i]->getIsAutorized())
-        getAuthorized(cmd, i, clients);
-    // else
-    // {
-    //     // другие команды
-    // }
     if (clients[i]->getIsAutorized())
-        std::cout << "client is authorized" << std::endl;
-    else
-        std::cout << "client is not authorized" << std::endl;
+        std::cout << "client is registered" << std::endl;
+
     
 }
 
 int main()
 {
-    int port = 1659;
+    int port = 1665;
     sockaddr_in addr;
 
     if (port < 1024)
@@ -131,7 +129,6 @@ int main()
     std::vector<Client*> clients;
     while (1)
     {
-        // sockaddr_in client;
         socklen_t clientSize = sizeof(addr);
         int clientSocket = accept(sock, (struct sockaddr*)&addr, &clientSize);
         if (clientSocket >= 0)
@@ -155,7 +152,7 @@ int main()
             {
                 if (fds[i].revents & POLLIN)
                 {
-                    char buf[100];
+                    char buf[512];
                     memset(buf, 0, 100);
                     int bytesRecv;
                     while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
