@@ -18,44 +18,101 @@
 
 std::string g_password = "puk";
 
+class Client;
+void closeAndErase(std::vector<Client*> clients, int i);
+
 class Client
 {
 public:
-    std::string name;
-    std::string nick;
+
     int clientSocket;
 
 private:
-    std::string password;
     bool isAutorized;
-
-
+    bool password;
+    std::string username;
+    std::string realname;
+    std::string nick;
 public:
     Client(int sock) : clientSocket(sock)
     {
         isAutorized = 0;
+        nick.clear();
+        realname.clear();
+        username.clear();
     }
 
     void setPassword(std::string const &pass)
     {
         if (pass.length() == 0)
-            std::cout << "ERR_NEEDMOREPARAMS" << std::endl;
+        {
+            send(clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+            return;
+        }
         if (isAutorized)
-            std::cout << "ERR_ALREADYREGISTRED" << std::endl;
-        this->password = pass;
-    } 
-    void setNick(std::string const &nick)  { this->nick = nick; }
-    void setName(std::string const &name) { this->name = name; }
+        {
+            send(clientSocket, "ERR_ALREADYREGISTRED\n", 20, 0);
+            return;
+        }
+        if (g_password == pass)
+            password = true;
+    }
+    bool getPass() { return password; }
+    void setNick(std::string const &nick) { this->nick = nick; }
+    std::string &getNick()  { return nick; }
+    void setName(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
+    {
+        if (nick.empty())
+        {
+            closeAndErase(clients, i);
+            return;
+        }
+        else
+        {
+            if (cmd.size() < 5)
+            {
+                send(clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+                return;
+            }
+            username = cmd[1];
+            if (cmd[4][0] == ':')
+            {
+                cmd[4].erase(0, 1);
+                int i = 4;
+                int len = cmd.size();
+                while (i < len)
+                {
+                    realname.append(cmd[i]);
+                    if (i + 1 < len)
+                        realname.append(" ");
+                    i++;
+                }
+            }
+            else
+                realname = cmd[4];
+        }
+    }
     void checkIfAutorized()
     {
-        if ((password == g_password) && name.length() > 0 && nick.length() > 0)
+        if (password && !realname.empty() &&  !nick.empty() && !username.empty())
+        {
             isAutorized = true;
+            send(clientSocket, "You are registered\n", 20, 0);
+        }
     }
     bool getIsAutorized()
     {
         return isAutorized;
     }
 };
+
+void closeAndErase(std::vector<Client*> clients, int i)
+{
+    close(clients[i]->clientSocket);
+    std::vector<Client*>::iterator it = clients.begin() + i;
+    clients.erase(it);
+}
+
 
 std::vector<std::string> splitString(std::string buf)
 {
@@ -80,25 +137,63 @@ std::vector<std::string> splitString(std::string buf)
     return strings;
 }
 
+bool checkExistingNicknames(std::vector<Client*> clients, std::string const &nickname)
+{
+    std::vector<Client*>::iterator it = clients.begin();
+    std::vector<Client*>::iterator ite = clients.end();
+    while (it != ite)
+    {
+        if ((*it)->getNick() == nickname)
+            return true;
+        it++;
+    }
+    return false;
+}
+
+
+void getRegistered(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
+{
+    if (cmd[0] == "PASS")
+        clients[i]->setPassword(cmd[1]);
+    else
+    {
+        if (!clients[i]->getPass())
+            closeAndErase(clients, i);
+    }
+    if (cmd[0] == "USER")
+    {
+        if (!clients[i]->getPass())
+            closeAndErase(clients, i);
+        else
+            clients[i]->setName(cmd, i, clients);
+    }
+    if (cmd[0] == "NICK" && clients[i]->getPass())
+    {
+        if (!clients[i]->getPass())
+            closeAndErase(clients, i);
+        else
+        {
+            if (!checkExistingNicknames(clients, cmd[1]))
+                clients[i]->setNick(cmd[1]);
+            else
+                send(clients[i]->clientSocket, "ERR_NICKCOLLISION\n", 19, 0);
+        }
+    }
+    clients[i]->checkIfAutorized();
+}
+
 
 void whichCmd(char *buf, int i, std::vector<Client*> clients)
 {
     std::string tmp = buf;
+    if (tmp.size() == 1)
+        return;
     tmp.erase(tmp.size() - 1);
     tmp.append("\0");
     std::vector<std::string> cmd = splitString(tmp);
-    if (cmd[0] == "PASS")
-        clients[i]->setPassword(cmd[1]);
-    if (cmd[0] == "NAME")
-        clients[i]->setName(cmd[1]);
-    if (cmd[0] == "NICK")
-        clients[i]->setNick(cmd[1]);
-    clients[i]->checkIfAutorized();
+    if (!clients[i]->getIsAutorized())
+        getRegistered(cmd, i, clients);
 
-    if (clients[i]->getIsAutorized())
-        std::cout << "client is registered" << std::endl;
-
-    
 }
 
 int main()
