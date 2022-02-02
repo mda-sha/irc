@@ -17,6 +17,7 @@
 
 
 std::string g_password = "puk";
+std::string oper_password = "puk"
 
 class Client;
 void closeAndErase(std::vector<Client*> clients, int i);
@@ -54,6 +55,7 @@ private:
     bool isAutorized;
     bool password;
     bool away;
+    bool oper;
     std::string username;
     std::string realname;
     std::string nick;
@@ -63,6 +65,7 @@ public:
     {
         isAutorized = 0;
         away = 0;
+        oper = 0;
         nick.clear();
         realname.clear();
         username.clear();
@@ -80,6 +83,8 @@ public:
 
     std::string &getUsername() { return username; }
     std::string &getRealname() { return realname; }
+
+    void makeOper() { oper = true; }
 
     void setPassword(std::string const &pass, std::vector<Client*> clients, int i)
     {
@@ -99,7 +104,14 @@ public:
             closeAndErase(clients, i);
     }
     bool getPass() { return password; }
-    void setNick(std::string const &nick) { this->nick = nick; }
+    void setNick(std::vector<Clients*> clients, int i)
+    {
+        if (checkExistingNicknames(clients, cmd[1]) == -1)
+            nick = cmd[1];
+        else
+            send(clients[i]->clientSocket, "ERR_NICKCOLLISION\n", 19, 0);
+    }
+
     std::string &getNick()  { return nick; }
     void setName(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
     {
@@ -202,12 +214,7 @@ void getRegistered(std::vector<std::string> cmd, int i, std::vector<Client*> cli
         if (!clients[i]->getPass())
             closeAndErase(clients, i);
         else
-        {
-            if (checkExistingNicknames(clients, cmd[1]) == -1)
-                clients[i]->setNick(cmd[1]);
-            else
-                send(clients[i]->clientSocket, "ERR_NICKCOLLISION\n", 19, 0);
-        }
+            setNick(clients, i);
     }
     clients[i]->checkIfAutorized();
 }
@@ -308,6 +315,18 @@ void userhost(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
     }
 }
 
+void oper(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
+{
+    if (cmd.size() < 3)
+    {
+        send(clients[i]->clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+        return;
+    }
+    int i;
+    if ((i = checkExistingNicknames(clients, cmd[1])) != -1 && cmd[2] == oper_password)
+        clients[i]->makeOper();
+}
+
 void whichCmd(char *buf, int i, std::vector<Client*> clients)
 {
     std::string tmp = buf;
@@ -320,6 +339,12 @@ void whichCmd(char *buf, int i, std::vector<Client*> clients)
         getRegistered(cmd, i, clients);
     else
     {
+        if (cmd[0] == "PASS")
+            clients[i]->setPassword(cmd[1], clients, i);
+        if (cmd[0] == "USER")
+            clients[i]->setName(cmd, i, clients);
+        if (cmd[0] == "NICK")
+            setNick(clients, i);
         if (cmd[0] == "PRIVMSG")
             privmsg(cmd, clients, i, false);
         if (cmd[0] == "AWAY")
@@ -328,7 +353,8 @@ void whichCmd(char *buf, int i, std::vector<Client*> clients)
             privmsg(cmd, clients, i, true);
         if (cmd[0] == "USERHOST")
             userhost(cmd, clients, i);
-    }
+        if (cmd[0] == "OPER")
+            oper(cmd, clients, i);
 
 }
 
