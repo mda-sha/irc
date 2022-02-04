@@ -17,10 +17,12 @@
 
 
 std::string g_password = "puk";
-std::string oper_password = "puk"
+std::string oper_password = "puk";
 
 class Client;
 void closeAndErase(std::vector<Client*> clients, int i);
+int checkExistingNicknames(std::vector<Client*> clients, std::string const &nickname);
+
 
 std::string makeStringAfterPrefix(std::vector<std::string> cmd)
 {
@@ -86,8 +88,9 @@ public:
 
     void makeOper() { oper = true; }
 
-    void setPassword(std::string const &pass, std::vector<Client*> clients, int i)
+    void setPassword(std::string pass, std::vector<Client*> clients, int i)
     {
+
         if (pass.length() == 0)
         {
             send(clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
@@ -98,16 +101,18 @@ public:
             send(clientSocket, "ERR_ALREADYREGISTRED\n", 20, 0);
             return;
         }
+        if (pass[0] == ':')
+            pass = pass.substr(1, pass.size() - 1);
         if (g_password == pass)
             password = true;
         else
             closeAndErase(clients, i);
     }
     bool getPass() { return password; }
-    void setNick(std::vector<Clients*> clients, int i)
+    void setNick(std::vector<Client*> clients, int i, std::string nickname)
     {
-        if (checkExistingNicknames(clients, cmd[1]) == -1)
-            nick = cmd[1];
+        if ((checkExistingNicknames(clients, nickname)) == -1)
+            nick = nickname;
         else
             send(clients[i]->clientSocket, "ERR_NICKCOLLISION\n", 19, 0);
     }
@@ -115,31 +120,24 @@ public:
     std::string &getNick()  { return nick; }
     void setName(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
     {
-        if (nick.empty())
+        if (cmd.size() < 5)
         {
-            closeAndErase(clients, i);
+            send(clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
             return;
         }
+        username = cmd[1];
+        if (cmd[4][0] == ':')
+            realname = makeStringAfterPrefix(cmd);
         else
-        {
-            if (cmd.size() < 5)
-            {
-                send(clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
-                return;
-            }
-            username = cmd[1];
-            if (cmd[4][0] == ':')
-                realname = makeStringAfterPrefix(cmd);
-            else
-                realname = cmd[4];
-        }
+            realname = cmd[4];
     }
     void checkIfAutorized()
     {
         if (password && !realname.empty() &&  !nick.empty() && !username.empty())
         {
             isAutorized = true;
-            send(clientSocket, "You are registered\n", 20, 0);
+            send(clientSocket, "**************\nwelcome to irc\n: 376 \n", 38, 0);
+            std::cout << "new registered user " << nick << std::endl;
         }
     }
     bool getIsAutorized()
@@ -214,7 +212,7 @@ void getRegistered(std::vector<std::string> cmd, int i, std::vector<Client*> cli
         if (!clients[i]->getPass())
             closeAndErase(clients, i);
         else
-            setNick(clients, i);
+            clients[i]->setNick(clients, i, cmd[1]);
     }
     clients[i]->checkIfAutorized();
 }
@@ -243,15 +241,23 @@ void privmsg(std::vector<std::string> cmd, std::vector<Client*> clients, int i, 
     {
         if (*it_ind == -1)
         {
-            send(clients[i]->clientSocket, "ERR_NOSUCHNICK\n", 18, 0);
+            send(clients[i]->clientSocket, "ERR_NOSUCHNICK\n", 16, 0);
             ++it_ind;
             continue;
         }
-        send(clients[*it_ind]->clientSocket, "PRIVMSG from ", 14, 0);
-        send(clients[*it_ind]->clientSocket, nick.c_str(), nick.size(), 0);
-        send(clients[*it_ind]->clientSocket, ": ", 2, 0);
-        send(clients[*it_ind]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
-        send(clients[*it_ind]->clientSocket, "\n", 1, 0);
+        std::string finalString= ":" + nick + "!";
+        std::string tmp = clients[i]->getUsername();
+        finalString += tmp;
+        finalString += "@127.0.0.1 PRIVMSG ";
+        tmp = clients[*it_ind]->getNick();
+        finalString += tmp;
+        finalString += " :";
+        finalString += stringToSend;
+        finalString += "\n";
+        
+        send(clients[*it_ind]->clientSocket, finalString.c_str(), finalString.size(), 0);
+        std::cout << finalString << std::endl;
+
         if (clients[*it_ind]->getAway() && !notice)
         {
             std::string resp = clients[*it_ind]->getNick();
@@ -322,19 +328,15 @@ void oper(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
         send(clients[i]->clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
         return;
     }
-    int i;
-    if ((i = checkExistingNicknames(clients, cmd[1])) != -1 && cmd[2] == oper_password)
+    int a;
+    if ((a = checkExistingNicknames(clients, cmd[1])) != -1 && cmd[2] == oper_password)
         clients[i]->makeOper();
 }
 
-void whichCmd(char *buf, int i, std::vector<Client*> clients)
+void whichCmd(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
 {
-    std::string tmp = buf;
-    if (tmp.size() == 1)
+    if (cmd.size() == 0)
         return;
-    tmp.erase(tmp.size() - 1);
-    tmp.append("\0");
-    std::vector<std::string> cmd = splitString(tmp);
     if (!clients[i]->getIsAutorized())
         getRegistered(cmd, i, clients);
     else
@@ -344,7 +346,7 @@ void whichCmd(char *buf, int i, std::vector<Client*> clients)
         if (cmd[0] == "USER")
             clients[i]->setName(cmd, i, clients);
         if (cmd[0] == "NICK")
-            setNick(clients, i);
+            clients[i]->setNick(clients, i, cmd[1]);
         if (cmd[0] == "PRIVMSG")
             privmsg(cmd, clients, i, false);
         if (cmd[0] == "AWAY")
@@ -355,12 +357,36 @@ void whichCmd(char *buf, int i, std::vector<Client*> clients)
             userhost(cmd, clients, i);
         if (cmd[0] == "OPER")
             oper(cmd, clients, i);
+    }
 
+}
+
+void prepareBuf(char *buf, int i, std::vector<Client*> clients)
+{
+    std::string tmp = buf;
+    if (tmp.size() == 1)
+        return;
+    int n;
+    std::string newBuf;
+    std::vector<std::string> cmd;
+    while ((n = tmp.find("\n")) != std::string::npos)
+    {
+        newBuf = tmp.substr(0, n);
+        tmp = tmp.substr(n + 1, tmp.size() - n);
+        if (newBuf[newBuf.size() - 1] == '\r')
+            newBuf.erase(newBuf.size() - 1);
+        cmd = splitString(newBuf);
+        whichCmd(cmd, i, clients);           
+    }
+    if (tmp[tmp.size() - 1] == '\r')
+        tmp.erase(tmp.size() - 1);
+    cmd = splitString(tmp);
+    whichCmd(cmd, i, clients); 
 }
 
 int main()
 {
-    int port = 1666;
+    int port = 1665;
     sockaddr_in addr;
 
     if (port < 1024)
@@ -414,7 +440,8 @@ int main()
                     int bytesRecv;
                     while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
                     {
-                        whichCmd(buf, i, clients);
+                        prepareBuf(buf, i, clients);
+                        // whichCmd(buf, i, clients);
                     }
                     fds[i].revents = 0;
                 }
