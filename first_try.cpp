@@ -136,7 +136,13 @@ public:
         if (password && !realname.empty() &&  !nick.empty() && !username.empty())
         {
             isAutorized = true;
-            send(clientSocket, "**************\nwelcome to irc\n: 376 \n", 38, 0);
+            std::string msg;
+            msg = ":server 375 " + nick + " :- server Message of the day -\n";
+            send(clientSocket, msg.c_str(), msg.size(), 0);
+            msg = ":server 372 " + nick + " : ДАШКА КАКАШКА\n";
+            send(clientSocket, msg.c_str(), msg.size(), 0);
+            msg = ":server 376 " + nick + " :End of /MOTD command\n";
+            send(clientSocket, msg.c_str(), msg.size(), 0);
             std::cout << "new registered user " << nick << std::endl;
         }
     }
