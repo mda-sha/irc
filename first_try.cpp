@@ -266,13 +266,8 @@ void privmsg(std::vector<std::string> cmd, std::vector<Client*> clients, int i, 
 
         if (clients[*it_ind]->getAway() && !notice)
         {
-            std::string resp = clients[*it_ind]->getNick();
-            std::string msg = clients[*it_ind]->getAwayMsg();
-            send(clients[i]->clientSocket, "Automatic respond from ", 24, 0);
-            send(clients[i]->clientSocket, resp.c_str(), resp.size(), 0);
-            send(clients[i]->clientSocket, ": ", 2, 0);
-            send(clients[i]->clientSocket, msg.c_str(), msg.size(), 0);
-            send(clients[i]->clientSocket, "\n", 1, 0);
+            std::string str = ":server 301 " + clients[i]->getNick() + " " + clients[*it_ind]->getNick() + " :" + clients[*it_ind]->getAwayMsg() + "\n";
+            send(clients[i]->clientSocket, str.c_str(), str.size(), 0);
         }
         ++it_ind;
     }
@@ -287,6 +282,10 @@ void away(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
     }
     clients[i]->setAway(true);
     clients[i]->setAwayMsg(makeStringAfterPrefix(cmd));
+    std::string stringToSend = ":server 306 ";
+    stringToSend += clients[i]->getNick();
+    stringToSend += " :You have been marked as being away\n";
+    send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
 }
 
 void userhost(std::vector<std::string> cmd, std::vector<Client*> clients, int i)
