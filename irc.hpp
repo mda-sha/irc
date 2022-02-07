@@ -203,15 +203,17 @@ public:
 
     void userhost(std::vector<std::string> cmd, int i)
     {
+        std::string stringToSend;
         if (cmd.size() == 1)
         {
-            send(clients[i]->clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+            stringToSend = ":server 461 " + clients[i]->getNick() + "USERHOST :Not enough parameters\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
             return;
         }
         int params = 5;
-        std::string tmp;
         std::vector<std::string>::iterator it_cmd = cmd.begin() + 1;
         std::vector<std::string>::iterator ite_cmd = cmd.end();
+        stringToSend = ":server 302 " + clients[i]->getNick() + " :";
         while (params-- && it_cmd != ite_cmd)
         {
             std::vector<Client*>::iterator it_cl = clients.begin();
@@ -220,23 +222,15 @@ public:
             {
                 if (*it_cmd == (*it_cl)->getNick())
                 {
-                    tmp = (*it_cl)->getNick();
-                    send(clients[i]->clientSocket, "Nickname: ", 10, 0);
-                    send(clients[i]->clientSocket, tmp.c_str(), tmp.size(), 0);
-                    send(clients[i]->clientSocket, "\n", 1, 0);
-                    send(clients[i]->clientSocket, "Username: ", 10, 0);
-                    tmp = (*it_cl)->getUsername();
-                    send(clients[i]->clientSocket, tmp.c_str(), tmp.size(), 0);
-                    send(clients[i]->clientSocket, "\n", 1, 0);
-                    send(clients[i]->clientSocket, "Real name: ", 11, 0);
-                    tmp = (*it_cl)->getRealname();
-                    send(clients[i]->clientSocket, tmp.c_str(), tmp.size(), 0);
-                    send(clients[i]->clientSocket, "\n\n", 2, 0);
+                    stringToSend += *it_cmd;
+                    stringToSend += "=+@127.0.0.1 ";
                 }
                 it_cl++;
             }
             it_cmd++;
         }
+        stringToSend += "\n";
+        send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
     }
 
     void oper(std::vector<std::string> cmd, int i)
@@ -248,7 +242,10 @@ public:
         }
         int a;
         if ((a = checkExistingNicknames(cmd[1], clients)) != -1 && cmd[2] == oper_password)
+        {
             clients[i]->makeOper();
+            send(clients[i]->clientSocket, ":server 381 :You are now an IRC operator\n", 42, 0);
+        }
     }
 
     void whichCmd(std::vector<std::string> cmd, int i)
