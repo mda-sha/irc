@@ -10,13 +10,19 @@
 #include <vector>
 #include <sys/fcntl.h>
 #include <cstring>
+#include <csignal>
 #include "client.hpp"
-
+#include "channel.hpp"
 
 // class Client;
 // void closeAndErase(std::vector<Client*> clients, int i);
 // int checkExistingNicknames(std::vector<Client*> clients, std::string const &nickname);
 // std::string makeStringAfterPrefix(std::vector<std::string> cmd);
+
+    int sock;
+
+void sig(int sig);
+
 
     std::string makeStringAfterPrefix(std::vector<std::string> cmd)
     {
@@ -67,9 +73,11 @@ class irc
 {
 private:
     std::vector<Client*> clients;
+    std::vector<Channel*> channels;
     std::string g_password;
     std::string oper_password;
     int port;
+
     
 public:
 
@@ -171,8 +179,6 @@ public:
             finalString += "\n";
 
             send(clients[*it_ind]->clientSocket, finalString.c_str(), finalString.size(), 0);
-            // std::cout << finalString << std::endl;
-
             if (clients[*it_ind]->getAway() && !notice)
             {
                 std::string str = ":server 301 " + clients[i]->getNick() + " " + clients[*it_ind]->getNick() + " :" + clients[*it_ind]->getAwayMsg() + "\n";
@@ -248,6 +254,29 @@ public:
         }
     }
 
+    void join(std::vector<std::string> cmd, int i)
+    {
+        std::vector<Channel*>::iterator it = channels.begin();
+        std::vector<Channel*>::iterator ite = channels.end();
+        while (it != ite)
+        {
+            if ((*it)->getName() == cmd[1])
+            {
+
+            }
+
+        }
+        if (it == ite)
+        {
+            Channel *newChannel = new Channel(cmd[i])
+            newChannel.setOperatorNick(clients[i]->getNick());
+            clients[i].addToChannel(it);
+            channels.push_back(newChannel);
+
+            std::cout << "new channel " << cmd[i] << " created" << std::endl;
+        }
+    }
+
     void whichCmd(std::vector<std::string> cmd, int i)
     {
         if (cmd.size() == 0)
@@ -275,6 +304,8 @@ public:
                 userhost(cmd, i);
             if (cmd[0] == "OPER")
                 oper(cmd, i);
+            if (cmd[0] == "JOIN")
+                join(cmd, i);
         }
 
     }
@@ -319,7 +350,7 @@ public:
     	addr.sin_port = htons(port);
     	addr.sin_family = AF_INET;
         inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr);
-        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock == -1)
             std::cout << "*" << std::endl;
         if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
@@ -328,6 +359,9 @@ public:
             std::cout << "*" << std::endl;
     	fcntl(sock, F_SETFL, O_NONBLOCK); ///////////////////// разобраться, что это. без этого не работает        
             std::vector<struct pollfd> fds;
+
+        signal(SIGINT, &sig);
+        signal(SIGQUIT, &sig);
 
         while (1)
         {
@@ -344,7 +378,7 @@ public:
                 b.events = POLLIN;
                 b.revents = 0;
                 fds.push_back(b);
-                std::cout << "clientSocket = " << clientSocket << std::endl;
+                std::cout << "new clientSocket = " << clientSocket << std::endl;
             }
 
             int a = poll(fds.data(), fds.size(), 1000);
@@ -358,16 +392,12 @@ public:
                         memset(buf, 0, 100);
                         int bytesRecv;
                         while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
-                        {
                             prepareBuf(buf, i);
-                            // whichCmd(buf, i, clients);
-                        }
                         fds[i].revents = 0;
                     }
                 }
             }
         }
-        close(sock);
     }
 
 };

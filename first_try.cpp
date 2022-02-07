@@ -1,5 +1,12 @@
 #include "irc.hpp"
 
+
+void sig(int sig)
+{
+    close(sock);
+    exit(0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 3)

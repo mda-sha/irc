@@ -19,6 +19,7 @@ private:
     std::string realname;
     std::string nick;
     std::string away_msg;
+    std::vector<Channel*> clientChannels;
 public:
     Client(int sock) : clientSocket(sock)
     {
@@ -29,7 +30,10 @@ public:
         realname.clear();
         username.clear();
     }
-
+    void addToChannel(Channel *chanel)
+    {
+        clientChannels.push_back(channel);
+    }
     void setAwayMsg(std::string const &str) { away_msg = str; }
     std::string getAwayMsg() { return away_msg; }
 
