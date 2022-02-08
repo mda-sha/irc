@@ -1,4 +1,5 @@
 class Client;
+// class Channel;
 
 std::string makeStringAfterPrefix(std::vector<std::string> cmd);
 int checkExistingNicknames(std::string const &nickname, std::vector<Client*>clients);
@@ -19,7 +20,8 @@ private:
     std::string realname;
     std::string nick;
     std::string away_msg;
-    std::vector<Channel*> clientChannels;
+    std::vector<std::string> clientChannels;
+    std::vector<std::string> chop;
 public:
     Client(int sock) : clientSocket(sock)
     {
@@ -30,14 +32,26 @@ public:
         realname.clear();
         username.clear();
     }
-    void addToChannel(Channel *chanel)
+
+    void addToChannel(Channel *channel)
     {
-        clientChannels.push_back(channel);
+        clientChannels.push_back(channel->getName());
     }
+
+    void addChop(std::string channelName)
+    {
+        chop.push_back(channelName);
+    }
+
+    std::vector<std::string> getChop()
+    {
+        return chop;
+    }
+
     void setAwayMsg(std::string const &str) { away_msg = str; }
     std::string getAwayMsg() { return away_msg; }
 
-    std::vector<Channel*> getChannels { return clientChannels; }
+    std::vector<std::string> getChannels() { return clientChannels; }
 
     void setAway(bool t_f)
     {
