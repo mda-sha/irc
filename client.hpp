@@ -37,6 +37,8 @@ public:
     void setAwayMsg(std::string const &str) { away_msg = str; }
     std::string getAwayMsg() { return away_msg; }
 
+    std::vector<Channel*> getChannels { return clientChannels; }
+
     void setAway(bool t_f)
     {
         away = t_f;
