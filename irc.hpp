@@ -281,7 +281,7 @@ public:
                     std::vector<Channel*>::iterator ch_ite = channels.end();
                     while (ch_it != ch_ite)
                     {
-                        if ((*ch_it)->getOperatorNick() == (*it)->getNick())
+                        if ((*ch_it)->getOperatorNick() == (*it)->getNick() && channelName == (*ch_it)->getName())
                         {
                             str+= "@";
                             break;
@@ -316,7 +316,6 @@ public:
         stringToSend.clear();
         stringToSend = ":server 366 " + clients[i]->getNick() + " " + cmd[1] + " :End of /NAMES list\n";
         send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
-        std::cout << "new channel " << cmd[1] << " created" << std::endl;
     }
 
     void join(std::vector<std::string> cmd, int i)
@@ -346,13 +345,22 @@ public:
                     send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
                     return;
                 }
-
-                clients[i]->addToChannel(*it);
-                sendMsgAfterJoin(cmd, i, **it);
+                std::string pass = (*it)->getPass();
+                if (!pass.empty() && cmd[2] != pass)
+                {
+                    stringToSend = ":server 475 " + cmd[1] + " :Cannot join channel (+k)\n";
+                    send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                    return;
+                }
+                if (!clients[i]->checkIfOnChannel((*it)->getName()))
+                {
+                    clients[i]->addToChannel(*it);
+                    (*it)->addClient();
+                    sendMsgAfterJoin(cmd, i, **it);
+                }
                 return;
             }
             ++it;
-
         }
         if (it == ite)
         {
@@ -362,14 +370,45 @@ public:
                 send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
                 return;
             }
-
             Channel *newChannel = new Channel(cmd[1]);
             newChannel->setOperatorNick(clients[i]->getNick());
             clients[i]->addToChannel(newChannel);
             channels.push_back(newChannel);
             sendMsgAfterJoin(cmd, i, *newChannel);
+            std::cout << "new channel " << cmd[1] << " created" << std::endl;
         }
     }
+
+    void part(std::vector<std::string> cmd, int i)
+    {
+        std::string stringToSend;
+        if (cmd.size() < 2)
+        {
+            stringToSend = ":server 461 " + clients[i]->getNick() + "USERHOST :Not enough parameters\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+            return;
+        }
+        std::vector<Channel*>::iterator it = channels.begin();
+        std::vector<Channel*>::iterator ite = channels.end();
+        while (it != ite)
+        {
+            if ((*it)->getName() == cmd[1])
+            {
+                if (clients[i]->removeChannel(cmd[1]))
+                    (*it)->removeClient();
+                else
+                {
+                    stringToSend = ":server 442 " + cmd[1] + " :You're not on that channel\n";
+                    send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                }
+                return;
+            }
+            ++it;
+        }
+        stringToSend = ":server 403 " + clients[i]->getNick() + " " + cmd[1] + " :No such channel\n";
+        send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+    }
+
 
     void whichCmd(std::vector<std::string> cmd, int i)
     {
@@ -400,6 +439,8 @@ public:
                 oper(cmd, i);
             if (cmd[0] == "JOIN")
                 join(cmd, i);
+            if (cmd[0] == "PART")
+                part(cmd, i);
         }
 
     }

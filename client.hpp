@@ -38,6 +38,36 @@ public:
         clientChannels.push_back(channel->getName());
     }
 
+    bool checkIfOnChannel(std::string name)
+    {
+        std::vector<std::string>::iterator it = clientChannels.begin();
+        std::vector<std::string>::iterator ite = clientChannels.end();
+        while (it != ite)
+        {
+            if (name == *it)
+            {
+                return true;
+            }
+            ++it;
+        }
+        return false;
+    }
+
+    bool removeChannel(std::string name)
+    {
+        std::vector<std::string>::iterator it = clientChannels.begin();
+        std::vector<std::string>::iterator ite = clientChannels.end();
+        while (it != ite)
+        {
+            if (name == *it)
+            {
+                clientChannels.erase(it);
+                return true;
+            }
+        }
+        return false;
+    }
+
     void addChop(std::string channelName)
     {
         chop.push_back(channelName);
