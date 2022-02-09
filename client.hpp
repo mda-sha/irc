@@ -1,5 +1,9 @@
+#ifndef CLIENT
+#define CLIENT
+
 class Client;
-// class Channel;
+class Channel;
+#include "channel.hpp"
 
 std::string makeStringAfterPrefix(std::vector<std::string> cmd);
 int checkExistingNicknames(std::string const &nickname, std::vector<Client*>clients);
@@ -159,3 +163,6 @@ public:
         return isAutorized;
     }
 };
+
+// #include "channel.hpp"
+#endif
