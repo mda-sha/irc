@@ -2,8 +2,9 @@
 #define CLIENT
 
 class Client;
-class Channel;
+
 #include "channel.hpp"
+class Channel;
 
 std::string makeStringAfterPrefix(std::vector<std::string> cmd);
 int checkExistingNicknames(std::string const &nickname, std::vector<Client*>clients);
@@ -37,10 +38,10 @@ public:
         username.clear();
     }
 
-    void addToChannel(Channel *channel)
-    {
-        clientChannels.push_back(channel->getName());
-    }
+    void addToChannel(Channel *channel);
+    // {
+        // clientChannels.push_back(channel->getName());
+    // }
 
     bool checkIfOnChannel(std::string name)
     {
@@ -164,5 +165,4 @@ public:
     }
 };
 
-// #include "channel.hpp"
 #endif

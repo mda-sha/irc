@@ -1,6 +1,5 @@
 #include "irc.hpp"
 
-
 void sig(int sig)
 {
     close(sock);
