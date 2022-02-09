@@ -1,7 +1,19 @@
 #ifndef CHANNEL
 #define CHANNEL
 
-// class Client;
+class Client;
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/poll.h>
+#include <iostream>
+#include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <vector>
+#include <sys/fcntl.h>
+#include <cstring>
+#include <csignal>
+
 #include "client.hpp"
 
 class Channel
@@ -36,29 +48,8 @@ public:
     void addClient() { clients++; }
     void removeClient() { clients--; }
     std::string getTopic() { return topic; }
-    void sendToEverybody(std::string stringToSend, std::vector<Client*> clients)
-    {
-        std::vector<Client*>::iterator cl_it = clients.begin();
-        std::vector<Client*>::iterator cl_ite = clients.end();
-        while (cl_it != cl_ite)
-        {
-            std::vector<std::string> clientChannels = (*cl_it)->getChannels();
-            std::vector<std::string>::iterator ch_it = clientChannels.begin();
-            std::vector<std::string>::iterator ch_ite = clientChannels.end();
-            while (ch_it != ch_ite)
-            {
-                if (*ch_it == name)
-                {
-                    send((*cl_it)->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
-                    break;
-                }
-                ++ch_it;
-            }
-            ++cl_it;
-        }
-    }
+    void sendToEverybody(std::string stringToSend, std::vector<Client*> clients);
 
 };
 
-// #include "client.hpp"
 #endif

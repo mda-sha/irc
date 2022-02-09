@@ -459,7 +459,7 @@ public:
                         stringToSend.clear();
                         stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 INVITE " + cmd[1] + " :" +  cmd[2] + "\n"; //////отправить всем
                         (*it_ch)->sendToEverybody(stringToSend, clients);
-                        // send((*it_cl)->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                        send((*it_cl)->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
                         // (*it_cl)->addToChannel(*it_ch);
                         // (*it_ch)->addClient();
                         return;                        
