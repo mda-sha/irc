@@ -44,18 +44,22 @@ public:
     void setOperatorNick(std::string nick) { operatorNick = nick; }
     std::string getPass() { return pass; }
     void setPass(std::string pass) { this->pass = pass; }
+    void removePass() {pass.clear(); }
     std::string getOperatorNick() { return operatorNick; }
     bool getInviteOnly() { return inviteOnly; }
+    void setInviteOnly(bool a) { inviteOnly = a; }
     int getMaxClients() { return maxClients; }
+    void setMaxClients(int q) { maxClients = q; }
     int getClients() { return clients; }
     void addClient() { clients++; }
     void removeClient() { clients--; }
     std::string getTopic() { return topic; }
     void setTopic(std::string newTopic)
     {
-        topic.empty();
+        topic.clear();
         topic = newTopic;
     }
+    void removeTopic() { topic.clear(); }
     void sendToEverybody(std::string stringToSend, std::vector<Client*> clients);
 
 };
