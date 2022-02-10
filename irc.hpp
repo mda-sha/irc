@@ -14,59 +14,47 @@
 #include "channel.hpp"
 #include "client.hpp"
 
-// class Client;
-// void closeAndErase(std::vector<Client*> clients, int i);
-// int checkExistingNicknames(std::vector<Client*> clients, std::string const &nickname);
-// std::string makeStringAfterPrefix(std::vector<std::string> cmd);
 
-    int sock;
+int sock;
 
 void sig(int sig);
 
 
-    std::string makeStringAfterPrefix(std::vector<std::string> cmd)
+std::string makeStringAfterPrefix(std::vector<std::string> cmd)
+{
+    std::vector<std::string>::iterator it = cmd.begin();
+    std::vector<std::string>::iterator ite = cmd.end();
+    while (it != ite)
     {
-        std::vector<std::string>::iterator it = cmd.begin();
-        std::vector<std::string>::iterator ite = cmd.end();
-        while (it != ite)
-        {
-            if ((*it)[0] == ':')
-                break;
-            it++;
-        }
-        (*it).erase(0, 1);
-        std::string ret;
-        ret.erase();
-        while (it != ite)
-        {
-            ret.append(*it);
-            if (it + 1 != ite)
-                ret.append(" ");
-            it++;
-        }
-        return ret;
+        if ((*it)[0] == ':')
+            break;
+        it++;
     }
-
-    int checkExistingNicknames(std::string const &nickname, std::vector<Client*>clients)
+    (*it).erase(0, 1);
+    std::string ret;
+    ret.erase();
+    while (it != ite)
     {
-        int i = 0;
-        int len = clients.size();
-        while (i < len)
-        {
-            if (clients[i]->getNick() == nickname)
-                return i;
-            i++;
-        }
-        return -1;
+        ret.append(*it);
+        if (it + 1 != ite)
+            ret.append(" ");
+        it++;
     }
+    return ret;
+}
 
-
-// std::string g_password = "puk";
-// std::string oper_password = "puk";
-
-// #include <netinet/in.h>
-// #include <arpa/inet.h>
-// #include <cstdlib>
+int checkExistingNicknames(std::string const &nickname, std::vector<Client*>clients)
+{
+    int i = 0;
+    int len = clients.size();
+    while (i < len)
+    {
+        if (clients[i]->getNick() == nickname)
+            return i;
+        i++;
+    }
+    return -1;
+}
 
 
 class irc
@@ -532,6 +520,63 @@ public:
         send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
     }
 
+    void topic(std::vector<std::string> cmd, int i)
+    {
+        std::string stringToSend;
+        if (cmd.size() < 2)
+        {
+            stringToSend = ":server 461 " + clients[i]->getNick() + "KICK :Not enough parameters\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+            return;
+        }
+        if (!clients[i]->checkIfOnChannel(cmd[1]))
+        {
+            stringToSend = ":server 442 " + cmd[1] + " :You're not on that channel\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+            return;
+        }
+        std::string newTopic;
+        std::vector<Channel*>::iterator it_ch = channels.begin();
+        std::vector<Channel*>::iterator ite_ch = channels.end(); 
+        while (it_ch != ite_ch)
+        {
+            if ((*it_ch)->getName() == cmd[1])
+            {
+                if (cmd.size() > 2)
+                {
+                    if ((*it_ch)->getT() && (*it_ch)->getOperatorNick() != clients[i]->getNick())
+                    {
+                        stringToSend = ":server 482 " + cmd[2] + " :You're not channel operator\n";
+                        send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                        return;
+                    }
+                    if (cmd.size() > 3 || (cmd.size() == 3 && cmd[2][0] == ':'))
+                        newTopic = makeStringAfterPrefix(cmd);
+                    else
+                        newTopic = cmd[2];
+                    (*it_ch)->setTopic(newTopic);
+                    stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 TOPIC "
+                             +  cmd[1] + " :" + newTopic + "\n";
+                    (*it_ch)->sendToEverybody(stringToSend, clients);
+                    return;
+                }
+                else
+                {
+                    std::string topic = (*it_ch)->getTopic();
+                    if (topic.empty())
+                        stringToSend = ":server 331 " + clients[i]->getNick() + " " + cmd[1] + " :No topic is set\n";
+                    else
+                        stringToSend = ":server 332 " + clients[i]->getNick() + " " + cmd[1] + " :" + topic + "\n";
+                    send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                    return;
+                }
+            }
+            ++it_ch;
+        }
+        stringToSend = ":server 401 " + cmd[1] + " :No such nick/channel\n";
+        send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+    }
+
 
     void whichCmd(std::vector<std::string> cmd, int i)
     {
@@ -568,6 +613,8 @@ public:
                 invite(cmd, i);
             if (cmd[0] == "KICK")
                 kick(cmd, i);
+            if (cmd[0] == "TOPIC")
+                topic(cmd, i);
         }
 
     }

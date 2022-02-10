@@ -21,6 +21,7 @@ class Channel
 private:
     std::string name;
     bool inviteOnly;
+    bool flagT;
     std::string pass;
     std::string topic;
     std::string operatorNick;
@@ -37,7 +38,9 @@ public:
         clients = 1;
         topic.clear();
         pass.clear();
+        flagT = false;
     }
+    bool getT() { return flagT; }
     void setOperatorNick(std::string nick) { operatorNick = nick; }
     std::string getPass() { return pass; }
     void setPass(std::string pass) { this->pass = pass; }
@@ -48,6 +51,11 @@ public:
     void addClient() { clients++; }
     void removeClient() { clients--; }
     std::string getTopic() { return topic; }
+    void setTopic(std::string newTopic)
+    {
+        topic.empty();
+        topic = newTopic;
+    }
     void sendToEverybody(std::string stringToSend, std::vector<Client*> clients);
 
 };
