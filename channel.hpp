@@ -41,6 +41,7 @@ public:
         flagT = false;
     }
     bool getT() { return flagT; }
+    void setT(bool a) { flagT = a; }
     void setOperatorNick(std::string nick) { operatorNick = nick; }
     std::string getPass() { return pass; }
     void setPass(std::string pass) { this->pass = pass; }
