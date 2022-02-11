@@ -38,6 +38,8 @@ public:
         username.clear();
     }
 
+    bool getOper() { return oper; }
+
     void addToChannel(Channel *channel);
     // {
         // clientChannels.push_back(channel->getName());
