@@ -577,6 +577,87 @@ public:
         send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
     }
 
+    void modeT(std::vector<std::string> cmd, int i, std::string const &charFrst, std::vector<Channel*>::iterator it_ch)
+    {
+        std::string stringToSend;
+        if (cmd[2][0] == '-')
+        {
+            (*it_ch)->setT(false);
+            stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
+            (*it_ch)->sendToEverybody(stringToSend, clients);
+        }
+        else if (cmd[2][0] == '+')
+        {
+            (*it_ch)->setT(true);
+            stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
+            (*it_ch)->sendToEverybody(stringToSend, clients);
+        }
+        else
+        {
+            stringToSend = ":server 472 " + charFrst + " :is unknown mode char to me\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+        }
+    }
+
+    void modeL(std::vector<std::string> cmd, int i, std::string const &charFrst, std::vector<Channel*>::iterator it_ch)
+    {
+        std::string stringToSend;
+        int n = atoi(cmd[3].c_str());
+        if (n == 0)
+            n = -1;
+        if (cmd[2][0] == '-')
+        {
+            (*it_ch)->setMaxClients(-1);
+            stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
+            (*it_ch)->sendToEverybody(stringToSend, clients);
+        }
+        else if (cmd[2][0] == '+')
+        {
+            if (cmd.size() < 4)
+            {
+                stringToSend = ":server 461 " + clients[i]->getNick() + "MODE :Not enough parameters\n";
+                send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                return;
+            }            
+            (*it_ch)->setMaxClients(n);
+            stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
+            (*it_ch)->sendToEverybody(stringToSend, clients);
+        }
+        else
+        {
+            stringToSend = ":server 472 " + charFrst + " :is unknown mode char to me\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+        }
+    }
+
+    void modeK(std::vector<std::string> cmd, int i, std::string const &charFrst, std::vector<Channel*>::iterator it_ch)
+    {
+        std::string stringToSend;
+        if (cmd.size() < 4)
+        {
+            stringToSend = ":server 461 " + clients[i]->getNick() + "MODE :Not enough parameters\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+            return;
+        }
+        if (cmd[2][0] == '-')
+        {
+            (*it_ch)->removePass();
+            stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
+            (*it_ch)->sendToEverybody(stringToSend, clients);
+        }
+        else if (cmd[2][0] == '+')
+        {
+            (*it_ch)->setPass(cmd[3]);
+            stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
+            (*it_ch)->sendToEverybody(stringToSend, clients);
+        }
+        else
+        {
+            stringToSend = ":server 472 " + charFrst + " :is unknown mode char to me\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+        }
+    }
+
     void mode(std::vector<std::string> cmd, int i)
     {
         std::string stringToSend;
@@ -609,96 +690,20 @@ public:
                     send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
                     return;
                 }
-                if (cmd[2][1] == 'i')
+                if (cmd[2][1] == 't')
                 {
-                    if (cmd[2][0] == '-')
-                    {
-                        (*it_ch)->setInviteOnly(false);
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }
-                    else if (cmd[2][0] == '+')
-                    {
-                        (*it_ch)->setInviteOnly(true);
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }  
-                    else
-                        stringToSend = ":server 472 " + charFrst + " :is unknown mode char to me\n";
-                }
-                else if (cmd[2][1] == 't')
-                {
-                    if (cmd[2][0] == '-')
-                    {
-                        (*it_ch)->setT(false);
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }
-                    else if (cmd[2][0] == '+')
-                    {
-                        (*it_ch)->setT(true);
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }
-                    else
-                        stringToSend = ":server 472 " + charFrst + " :is unknown mode char to me\n";
+                    modeT(cmd, i, charFrst, it_ch);
+                    return;
                 }
                 else if (cmd[2][1] == 'l')
                 {
-                    if (cmd.size() < 4)
-                    {
-                        stringToSend = ":server 461 " + clients[i]->getNick() + "MODE :Not enough parameters\n";
-                        send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
-                        return;
-                    }
-                    int n = atoi(cmd[3].c_str());
-                    if (n == 0)
-                        n = -1;
-                    if (cmd[2][0] == '-')
-                    {
-                        (*it_ch)->setMaxClients(-1);
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }
-                    else if (cmd[2][0] == '+')
-                    {
-                        (*it_ch)->setMaxClients(n);
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }
-                    else
-                        stringToSend = ":server 472 " + charFrst + " :is unknown mode char to me\n";
+                    modeL(cmd, i, charFrst, it_ch);
+                    return;
                 }
                 else if (cmd[2][1] == 'k')
                 {
-                    if (cmd.size() < 4)
-                    {
-                        stringToSend = ":server 461 " + clients[i]->getNick() + "MODE :Not enough parameters\n";
-                        send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
-                        return;
-                    }
-                    if (cmd[2][0] == '-')
-                    {
-                        (*it_ch)->removePass();
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }
-                    else if (cmd[2][0] == '+')
-                    {
-                        (*it_ch)->setPass(cmd[3]);
-                        stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 MODE " +  (*it_ch)->getName() + " " + cmd[2] + "\n";
-                        (*it_ch)->sendToEverybody(stringToSend, clients);
-                        return;
-                    }
-                    else
-                        stringToSend = ":server 472 " + charFrst + " :is unknown mode char to me\n";                    
+                    modeK(cmd, i, charFrst, it_ch);
+                    return;                   
                 }
                 else
                     stringToSend = ":server 472 " + charScnd + " :is unknown mode char to me\n";
@@ -711,6 +716,51 @@ public:
             ++it_ch;
         }
         stringToSend = ":server 401 " + cmd[1] + " :No such nick/channel\n";
+        send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+    }
+
+    void quit(int i)
+    {
+        closeAndErase(i);
+    }
+
+    // void makeStringForNames(std::vector<Channel*>::iterator ch_it, int i, )
+    // {
+    //     std::string stringToSend = ":server 353 " + clients[i]->getNick() + " = " + (*ch_it)->getName() + " :";
+    // }
+
+    void names(std::vector<std::string> cmd, int i)
+    {
+        std::string stringToSend;
+        std::vector<Channel*>::iterator ch_it = channels.begin();
+        std::vector<Channel*>::iterator ch_ite = channels.end();
+        if (cmd.size() > 1)
+        {
+            while (ch_it != ch_ite)
+            {
+                if ((*ch_it)->getName() == cmd[1])
+                {
+                    stringToSend = makeUsersInChannelString((*ch_it)->getName(), i);
+                    send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                    stringToSend.clear();
+                    stringToSend = ":server 366 " + clients[i]->getNick() + " " + cmd[1] + " :End of /NAMES list\n";
+                    send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+                    return;
+                }
+                ++ch_it;
+            }
+            stringToSend = ":server 403 " + clients[i]->getNick() + " " + cmd[1] + " :No such channel\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+            return;
+        }
+        while (ch_it != ch_ite)
+        {
+            stringToSend = makeUsersInChannelString((*ch_it)->getName(), i);
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+            stringToSend.clear();
+            ++ch_it;
+        }
+        stringToSend = ":server 366 " + clients[i]->getNick() + " * :End of /NAMES list\n";
         send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
     }
 
@@ -753,6 +803,10 @@ public:
                 topic(cmd, i);
             if (cmd[0] == "MODE")
                 mode(cmd, i);
+            if (cmd[0] == "QUIT")
+                quit(i);
+            if (cmd[0] == "NAMES")
+                names(cmd, i);
         }
 
     }
