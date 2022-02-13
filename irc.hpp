@@ -21,6 +21,21 @@ int sock;
 void sig(int sig);
 
 
+void removeChannel(std::vector<Channel*> &channels, std::string channelName)
+{
+    std::vector<Channel*>::iterator it = channels.begin();
+    std::vector<Channel*>::iterator ite = channels.end();
+    while (it != ite)
+    {
+        if ((*it)->getName() == channelName)
+        {
+            channels.erase(it);
+            break;
+        }
+        ++it;
+    }
+}
+
 std::string makeStringAfterPrefix(std::vector<std::string> cmd)
 {
     std::vector<std::string>::iterator it = cmd.begin();
@@ -393,7 +408,7 @@ public:
                 {
                     stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 PART " + cmd[1] + "\n";
                     (*it)->sendToEverybody(stringToSend, clients);
-                    (*it)->removeClient();
+                    (*it)->removeClient(channels);
                 }
                 else
                 {
@@ -500,7 +515,7 @@ public:
                                 else
                                     stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 KICK " + cmd[1] + " " +  cmd[2] + " :" + makeStringAfterPrefix(cmd) + "\n"; //////отправить всем
                                 (*it_ch)->sendToEverybody(stringToSend, clients);
-                                (*it_ch)->removeClient();
+                                (*it_ch)->removeClient(channels);
                                 (*it_cl)->removeChannel(cmd[1]);
                                 return;
                             }
@@ -818,6 +833,7 @@ public:
         {
             if ((*it)->getNick() == cmd[1])
             {
+                (*it)->deleteFromAllChannels(channels);
                 close((*it)->clientSocket);
                 clients.erase(it);
                 return;
@@ -827,6 +843,8 @@ public:
         stringToSend = ":server 401 " + cmd[1] + " :No such nick/channel\n";
         send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
     }
+
+
 
     void whichCmd(std::vector<std::string> cmd, int i)
     {
@@ -875,6 +893,9 @@ public:
                 list(cmd, i);
             if (cmd[0] == "KILL")
                 kill(cmd, i);
+            // if (cmd[0] == "WALLOPS")
+            //     wallops(cmd, i);
+
         }
 
     }

@@ -13,8 +13,10 @@ class Client;
 #include <sys/fcntl.h>
 #include <cstring>
 #include <csignal>
-
 #include "client.hpp"
+
+class Channel;
+void removeChannel(std::vector<Channel*> &channels, std::string channelName);
 
 class Channel
 {
@@ -53,7 +55,12 @@ public:
     void setMaxClients(int q) { maxClients = q; }
     int getClients() { return clients; }
     void addClient() { clients++; }
-    void removeClient() { clients--; }
+    void removeClient(std::vector<Channel*> &channels)
+    {
+        clients--;
+        if (clients < 1)
+            removeChannel(channels, name);        
+    }
     std::string getTopic() { return topic; }
     void setTopic(std::string newTopic)
     {

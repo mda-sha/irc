@@ -8,6 +8,7 @@ class Channel;
 
 std::string makeStringAfterPrefix(std::vector<std::string> cmd);
 int checkExistingNicknames(std::string const &nickname, std::vector<Client*>clients);
+void removeChannel(std::vector<Channel*> &channels, std::string channelName);
 
 
 class Client
@@ -43,6 +44,28 @@ public:
     void addToChannel(Channel *channel);
     // {
         // clientChannels.push_back(channel->getName());
+    // }
+
+    void deleteFromAllChannels(std::vector<Channel*> &channels);
+    // {
+    //     std::vector<std::string>::iterator clientChIt = clientChannels.begin();
+    //     std::vector<std::string>::iterator clientChIte = clientChannels.end();
+    //     while (clientChIt != clientChIte)
+    //     {
+    //         std::vector<Channel*>::iterator it = channels.begin();
+    //         std::vector<Channel*>::iterator ite = channels.end();
+    //         while (it != ite)
+    //         {
+    //             if ((*it)->getName() == *clientChIte)
+    //             {
+    //                 clientChannels.erase(clientChIt);
+    //                 (*it)->removeClient(channels);
+    //                 break;
+    //             }
+    //             ++it;
+    //         }
+    //         ++clientChIt;
+    //     }
     // }
 
     bool checkIfOnChannel(std::string name)
