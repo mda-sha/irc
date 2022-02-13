@@ -144,17 +144,51 @@ public:
         }
         clients[i]->checkIfAutorized();
     }
+    
+    std::vector<int> makeChannelIndArray(std::string channelName, std::string nick)
+    {
+        std::vector<int> ind;
+        int i = 0;
+        std::vector<Client*>::iterator it = clients.begin();
+        std::vector<Client*>::iterator ite = clients.end();
+        while (it != ite)
+        {
+            std::vector<std::string> clientChannels = (*it)->getChannels();
+            std::vector<std::string>::iterator chanIt = clientChannels.begin();
+            std::vector<std::string>::iterator chanIte = clientChannels.end();
+            while (chanIt != chanIte)
+            {
+                if (*chanIt == channelName && (*it)->getNick() != nick)
+                {
+                    ind.push_back(i);
+                    break;
+                }
+                ++chanIt;
+            }
+            ++i;
+            ++it;
+        }
+        return ind;
+    }
 
     void privmsg(std::vector<std::string> cmd, int i, bool notice)
     {
         std::vector<int> ind;
-        std::vector<std::string>::iterator it_cmd = cmd.begin() + 1;
-        std::vector<std::string>::iterator ite_cmd = cmd.end();
-        while (it_cmd != ite_cmd && (*it_cmd)[0] != ':')
+
+        if (cmd[1][0] != '#' && cmd[1][0] != '&')
         {
-            ind.push_back(checkExistingNicknames(*it_cmd, clients));
-            ++it_cmd;
+            std::vector<std::string>::iterator it_cmd = cmd.begin() + 1;
+            std::vector<std::string>::iterator ite_cmd = cmd.end();
+            while (it_cmd != ite_cmd && (*it_cmd)[0] != ':')
+            {
+                ind.push_back(checkExistingNicknames(*it_cmd, clients));
+                ++it_cmd;
+            }
         }
+        else
+            ind = makeChannelIndArray(cmd[1], clients[i]->getNick());
+
+
         std::string stringToSend = makeStringAfterPrefix(cmd);
         if (stringToSend.empty())
         {
@@ -176,7 +210,10 @@ public:
             std::string tmp = clients[i]->getUsername();
             finalString += tmp;
             finalString += "@127.0.0.1 PRIVMSG ";
-            tmp = clients[*it_ind]->getNick();
+            if (cmd[1][0] != '#' && cmd[1][0] != '&')
+                tmp = clients[*it_ind]->getNick();
+            else
+                tmp = cmd[1];
             finalString += tmp;
             finalString += " :";
             finalString += stringToSend;
@@ -311,7 +348,6 @@ public:
 
 
         stringToSend = ":" + clients[i]->getNick() + "!" + clients[i]->getUsername() + "@127.0.0.1 JOIN :" +  newChannel.getName() + "\n";/////отправить всем на канале
-        // send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
         newChannel.sendToEverybody(stringToSend, clients);
         stringToSend.clear();
         std::string topic = newChannel.getTopic();
@@ -921,9 +957,7 @@ public:
                 kill(cmd, i);
             if (cmd[0] == "WALLOPS")
                 wallops(cmd, i);
-
         }
-
     }
 
     void prepareBuf(char *buf, int i)
