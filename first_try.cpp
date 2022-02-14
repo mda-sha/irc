@@ -1,8 +1,12 @@
 #include "irc.hpp"
 
+irc IRC;
+
+
 void sig(int sig)
 {
-    close(sock);
+    close(IRC.getSock());
+    IRC.eraseAll();
     exit(0);
 }
 
@@ -15,7 +19,6 @@ int main(int argc, char **argv)
     }
 
     int port = atoi(argv[1]);
-    irc IRC;
 
     IRC.launchIrcServer(port, argv[2]);
 }

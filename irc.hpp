@@ -16,7 +16,6 @@
 #include <iostream>
 #include <string>
 
-int sock;
 
 void sig(int sig);
 
@@ -81,16 +80,36 @@ private:
     std::string g_password;
     std::string oper_password;
     int port;
+    int sock;
 
     
 public:
 
+    int getSock() { return sock; }
 
     void closeAndErase(int i)
     {
         close(clients[i]->clientSocket);
         std::vector<Client*>::iterator it = clients.begin() + i;
         clients.erase(it);
+    }
+
+    void eraseAll()
+    {
+        std::vector<Channel*>::iterator chIt = channels.begin();
+        std::vector<Channel*>::iterator chIte = channels.begin();
+        while (chIt != chIte)
+        {
+            delete(*chIt);
+            ++chIt;
+        }
+        std::vector<Client*>::iterator clIt = clients.begin();
+        std::vector<Client*>::iterator clIte = clients.begin();
+        while (clIt != clIte)
+        {
+            delete(*clIt);
+            ++clIt;
+        }
     }
 
     std::vector<std::string> splitString(std::string buf)
@@ -192,7 +211,8 @@ public:
         std::string stringToSend = makeStringAfterPrefix(cmd);
         if (stringToSend.empty())
         {
-            send(clients[i]->clientSocket, "ERR_NOTEXTTOSEND\n", 18, 0);
+            stringToSend = ":server 412 :No text to send\n";
+            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
             return;
         }
         std::string nick = clients[i]->getNick();
@@ -202,7 +222,8 @@ public:
         {
             if (*it_ind == -1)
             {
-                send(clients[i]->clientSocket, "ERR_NOSUCHNICK\n", 16, 0);
+                std::string err = ":server 401 :No such nick/channel\n";
+                send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
                 ++it_ind;
                 continue;
             }
@@ -284,7 +305,8 @@ public:
     {
         if (cmd.size() < 3)
         {
-            send(clients[i]->clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+            std::string str = ":server 461 " + clients[i]->getNick() + "OPER :Not enough parameters\n";
+            send(clients[i]->clientSocket, str.c_str(), str.size(), 0);
             return;
         }
         int a;
@@ -773,6 +795,7 @@ public:
 
     void quit(int i)
     {
+        clients[i]->deleteFromAllChannels(channels);
         closeAndErase(i);
     }
 
@@ -1003,16 +1026,25 @@ public:
         inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr);
         sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock == -1)
-            std::cout << "*" << std::endl;
+        {
+            std::cout << "socket opening error" << std::endl;
+            return;
+        }
         if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
-            std::cout << "*" << std::endl;
+        {
+            std::cout << "binding error" << std::endl;
+            return;
+        }
         if (listen(sock, SOMAXCONN) == -1)
-            std::cout << "*" << std::endl;
+        {
+            std::cout << "binding error" << std::endl;
+            return;
+        }
     	fcntl(sock, F_SETFL, O_NONBLOCK); ///////////////////// разобраться, что это. без этого не работает        
             std::vector<struct pollfd> fds;
 
         signal(SIGINT, &sig);
-        signal(SIGQUIT, &sig);
+        // signal(SIGQUIT, &sig);
 
         while (1)
         {

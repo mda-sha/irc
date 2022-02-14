@@ -42,32 +42,7 @@ public:
     bool getOper() { return oper; }
 
     void addToChannel(Channel *channel);
-    // {
-        // clientChannels.push_back(channel->getName());
-    // }
-
     void deleteFromAllChannels(std::vector<Channel*> &channels);
-    // {
-    //     std::vector<std::string>::iterator clientChIt = clientChannels.begin();
-    //     std::vector<std::string>::iterator clientChIte = clientChannels.end();
-    //     while (clientChIt != clientChIte)
-    //     {
-    //         std::vector<Channel*>::iterator it = channels.begin();
-    //         std::vector<Channel*>::iterator ite = channels.end();
-    //         while (it != ite)
-    //         {
-    //             if ((*it)->getName() == *clientChIte)
-    //             {
-    //                 clientChannels.erase(clientChIt);
-    //                 (*it)->removeClient(channels);
-    //                 break;
-    //             }
-    //             ++it;
-    //         }
-    //         ++clientChIt;
-    //     }
-    // }
-
     bool checkIfOnChannel(std::string name)
     {
         std::vector<std::string>::iterator it = clientChannels.begin();
@@ -127,15 +102,17 @@ public:
 
     bool setPassword(std::string g_password, std::string pass, std::vector<Client*> clients, int i)
     {
-
+        std::string str;
         if (pass.length() == 0)
         {
-            send(clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+            str = ":server 461 PASS :Not enough parameters\n";
+            send(clientSocket, str.c_str(), str.size(), 0);
             return 0;
         }
         if (isAutorized)
         {
-            send(clientSocket, "ERR_ALREADYREGISTRED\n", 20, 0);
+            str = ":server 462 :You may not reregister\n";
+            send(clientSocket, str.c_str(), str.size(), 0);
             return 1;
         }
         if (pass[0] == ':')
@@ -152,7 +129,10 @@ public:
         if ((checkExistingNicknames(nickname, clients)) == -1)
             nick = nickname;
         else
-            send(clients[i]->clientSocket, "ERR_NICKCOLLISION\n", 19, 0);
+        {
+            std::string str = ":server 436 " + nick + " :Nickname is already in use\n";
+            send(clients[i]->clientSocket, str.c_str(), str.size(), 0);
+        }
     }
 
     std::string &getNick()  { return nick; }
@@ -160,7 +140,8 @@ public:
     {
         if (cmd.size() < 5)
         {
-            send(clientSocket, "ERR_NEEDMOREPARAMS\n", 20, 0);
+            std::string stringToSend = ":server 461 " + nick + " USER :Not enough parameters\n";
+            send(clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
             return;
         }
         username = cmd[1];
