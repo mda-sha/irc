@@ -27,188 +27,37 @@ private:
     std::string nick;
     std::string away_msg;
     std::vector<std::string> clientChannels;
-    std::vector<std::string> chop;
     std::time_t lastActivity;
     bool pingFlag;
     bool pingSent;
 
 
 public:
-    Client(int sock) : clientSocket(sock)
-    {
-        isAutorized = 0;
-        away = 0;
-        oper = 0;
-        nick.clear();
-        realname.clear();
-        username.clear();
-        pingFlag = 0;
-        pingSent = 0;
-    }
-
-    void setLastActivity()
-    {
-        lastActivity = std::time(nullptr);
-        pingFlag = false;
-    }
-
-    int checkLastActivity()
-    {
-        std::time_t now = std::time(nullptr);
-        if (now - lastActivity > 90 && isAutorized)
-        {
-            pingFlag = true;
-            pingSent = true;
-            return 0;
-        }        
-        if (now - lastActivity > 60 && isAutorized)
-        {
-            pingFlag = true;
-            pingSent = true;
-            return 1;
-        }
-        pingFlag = false;
-        return 2;
-    }
-
-    void pingFlagsToFalse()
-    {
-        pingFlag = 0;
-        pingSent = 0;
-    }
-
-    bool getPingSent() { return pingSent; }
-
-    bool getOper() { return oper; }
-
+    Client(int sock);
+    void setLastActivity();
+    int checkLastActivity();
+    void pingFlagsToFalse();
+    bool getPingSent();
+    bool getOper();
     void addToChannel(Channel *channel);
     void deleteFromAllChannels(std::vector<Channel*> &channels);
-    bool checkIfOnChannel(std::string name)
-    {
-        std::vector<std::string>::iterator it = clientChannels.begin();
-        std::vector<std::string>::iterator ite = clientChannels.end();
-        while (it != ite)
-        {
-            if (name == *it)
-            {
-                return true;
-            }
-            ++it;
-        }
-        return false;
-    }
-
-    bool removeChannel(std::string name)
-    {
-        std::vector<std::string>::iterator it = clientChannels.begin();
-        std::vector<std::string>::iterator ite = clientChannels.end();
-        while (it != ite)
-        {
-            if (name == *it)
-            {
-                clientChannels.erase(it);
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void addChop(std::string channelName)
-    {
-        chop.push_back(channelName);
-    }
-
-    std::vector<std::string> getChop()
-    {
-        return chop;
-    }
-
-    void setAwayMsg(std::string const &str) { away_msg = str; }
-    std::string getAwayMsg() { return away_msg; }
-
-    std::vector<std::string> getChannels() { return clientChannels; }
-
-    void setAway(bool t_f)
-    {
-        away = t_f;
-    }
-
-    bool getAway() { return away; }
-
-    std::string &getUsername() { return username; }
-    std::string &getRealname() { return realname; }
-
-    void makeOper() { oper = true; }
-
-    bool setPassword(std::string g_password, std::string pass, std::vector<Client*> clients, int i)
-    {
-        std::string str;
-        if (pass.length() == 0)
-        {
-            str = ":server 461 PASS :Not enough parameters\n";
-            send(clientSocket, str.c_str(), str.size(), 0);
-            return 0;
-        }
-        if (isAutorized)
-        {
-            str = ":server 462 :You may not reregister\n";
-            send(clientSocket, str.c_str(), str.size(), 0);
-            return 1;
-        }
-        if (pass[0] == ':')
-            pass = pass.substr(1, pass.size() - 1);
-        if (g_password == pass)
-            password = true;
-        else
-            return 0;
-        return 1;
-    }
+    bool checkIfOnChannel(std::string name);
+    bool removeChannel(std::string name);
+    void setAwayMsg(std::string const &str);
+    std::string getAwayMsg();
+    std::vector<std::string> getChannels();
+    void setAway(bool t_f);
+    bool getAway();
+    std::string &getUsername();
+    std::string &getRealname();
+    void makeOper();
+    bool setPassword(std::string g_password, std::string pass);
     bool getPass() { return password; }
-    void setNick(std::vector<Client*> clients, int i, std::string nickname)
-    {
-        if ((checkExistingNicknames(nickname, clients)) == -1)
-            nick = nickname;
-        else
-        {
-            std::string str = ":server 436 " + nick + " :Nickname is already in use\n";
-            send(clients[i]->clientSocket, str.c_str(), str.size(), 0);
-        }
-    }
-
-    std::string &getNick()  { return nick; }
-    void setName(std::vector<std::string> cmd, int i, std::vector<Client*> clients)
-    {
-        if (cmd.size() < 5)
-        {
-            std::string stringToSend = ":server 461 " + nick + " USER :Not enough parameters\n";
-            send(clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
-            return;
-        }
-        username = cmd[1];
-        if (cmd[4][0] == ':')
-            realname = makeStringAfterPrefix(cmd);
-        else
-            realname = cmd[4];
-    }
-    void checkIfAutorized()
-    {
-        if (password && !realname.empty() &&  !nick.empty() && !username.empty())
-        {
-            isAutorized = true;
-            std::string msg;
-            msg = ":server 375 " + nick + " :- server Message of the day -\n";
-            send(clientSocket, msg.c_str(), msg.size(), 0);
-            msg = ":server 372 " + nick + " : ДАШКА КАКАШКА\n";
-            send(clientSocket, msg.c_str(), msg.size(), 0);
-            msg = ":server 376 " + nick + " :End of /MOTD command\n";
-            send(clientSocket, msg.c_str(), msg.size(), 0);
-            std::cout << "new registered user " << nick << std::endl;
-        }
-    }
-    bool getIsAutorized()
-    {
-        return isAutorized;
-    }
+    void setNick(std::vector<Client*> clients, int i, std::string nickname);
+    std::string &getNick();
+    void setName(std::vector<std::string> cmd);
+    void checkIfAutorized();
+    bool getIsAutorized();
 };
 
 #endif

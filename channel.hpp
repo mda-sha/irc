@@ -31,43 +31,26 @@ private:
     int clients;
 
 public:
-    std::string getName() {return name; }
-    void setName(std::string name) { this->name = name; }
-    Channel(std::string name) : name(name)
-    {
-        inviteOnly = false;
-        maxClients = -1;
-        clients = 1;
-        topic.clear();
-        pass.clear();
-        flagT = false;
-    }
-    bool getT() { return flagT; }
-    void setT(bool a) { flagT = a; }
-    void setOperatorNick(std::string nick) { operatorNick = nick; }
-    std::string getPass() { return pass; }
-    void setPass(std::string pass) { this->pass = pass; }
-    void removePass() {pass.clear(); }
-    std::string getOperatorNick() { return operatorNick; }
-    bool getInviteOnly() { return inviteOnly; }
-    void setInviteOnly(bool a) { inviteOnly = a; }
-    int getMaxClients() { return maxClients; }
-    void setMaxClients(int q) { maxClients = q; }
-    int getClients() { return clients; }
-    void addClient() { clients++; }
-    void removeClient(std::vector<Channel*> &channels)
-    {
-        clients--;
-        if (clients < 1)
-            removeChannel(channels, name);        
-    }
-    std::string getTopic() { return topic; }
-    void setTopic(std::string newTopic)
-    {
-        topic.clear();
-        topic = newTopic;
-    }
-    void removeTopic() { topic.clear(); }
+    std::string getName();
+    void setName(std::string name);
+    Channel(std::string name);
+    bool getT();
+    void setT(bool a);
+    void setOperatorNick(std::string nick);
+    std::string getPass();
+    void setPass(std::string pass);
+    void removePass();
+    std::string getOperatorNick();
+    bool getInviteOnly();
+    void setInviteOnly(bool a);
+    int getMaxClients();
+    void setMaxClients(int q);
+    int getClients();
+    void addClient();
+    void removeClient(std::vector<Channel*> &channels);
+    std::string getTopic();
+    void setTopic(std::string newTopic);
+    void removeTopic();
     void sendToEverybody(std::string stringToSend, std::vector<Client*> clients);
 
 };
