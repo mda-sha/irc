@@ -28,6 +28,11 @@ private:
     std::string away_msg;
     std::vector<std::string> clientChannels;
     std::vector<std::string> chop;
+    std::time_t lastActivity;
+    bool pingFlag;
+    bool pingSent;
+
+
 public:
     Client(int sock) : clientSocket(sock)
     {
@@ -37,7 +42,42 @@ public:
         nick.clear();
         realname.clear();
         username.clear();
+        pingFlag = 0;
+        pingSent = 0;
     }
+
+    void setLastActivity()
+    {
+        lastActivity = std::time(nullptr);
+        pingFlag = false;
+    }
+
+    int checkLastActivity()
+    {
+        std::time_t now = std::time(nullptr);
+        if (now - lastActivity > 90 && isAutorized)
+        {
+            pingFlag = true;
+            pingSent = true;
+            return 0;
+        }        
+        if (now - lastActivity > 60 && isAutorized)
+        {
+            pingFlag = true;
+            pingSent = true;
+            return 1;
+        }
+        pingFlag = false;
+        return 2;
+    }
+
+    void pingFlagsToFalse()
+    {
+        pingFlag = 0;
+        pingSent = 0;
+    }
+
+    bool getPingSent() { return pingSent; }
 
     bool getOper() { return oper; }
 

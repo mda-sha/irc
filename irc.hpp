@@ -15,6 +15,7 @@
 #include "client.hpp"
 #include <iostream>
 #include <string>
+#include <ctime>
 
 
 void sig(int sig);
@@ -931,6 +932,28 @@ public:
         }
     }
 
+    void pong(int i)
+    {
+        clients[i]->pingFlagsToFalse();
+    }
+
+    void ping()
+    {
+        int index = 0;
+        while (index < clients.size())
+        {
+            if (!clients[index]->getPingSent() && clients[index]->checkLastActivity() == 1)
+                send(clients[index]->clientSocket, ":server PING\n" , 14, 0);
+            else if (clients[index]->checkLastActivity() == 0)
+            {
+                clients[index]->deleteFromAllChannels(channels);
+                close(clients[index]->clientSocket);
+                std::vector<Client*>::iterator it = clients.begin() + index;
+                clients.erase(it);
+            }
+            ++index;
+        }
+    }
     void whichCmd(std::vector<std::string> cmd, int i)
     {
         if (cmd.size() == 0)
@@ -980,6 +1003,8 @@ public:
                 kill(cmd, i);
             if (cmd[0] == "WALLOPS")
                 wallops(cmd, i);
+            if (cmd[0] == "PONG")
+                pong(i);
         }
     }
 
@@ -1005,6 +1030,46 @@ public:
             tmp.erase(tmp.size() - 1);
         cmd = splitString(tmp);
         whichCmd(cmd, i); 
+    }
+
+    void work(sockaddr_in addr, std::vector<struct pollfd> fds)
+    {
+        while (1)
+        {
+            socklen_t clientSize = sizeof(addr);
+            int clientSocket = accept(sock, (struct sockaddr*)&addr, &clientSize);
+            if (clientSocket >= 0)
+            {
+                clients.push_back(new Client(clientSocket));
+                struct pollfd b;
+                b.fd = clientSocket;
+                b.events = POLLIN;
+                b.revents = 0;
+                fds.push_back(b);
+                std::cout << "new clientSocket = " << clientSocket << std::endl;
+            }
+
+            int a = poll(fds.data(), fds.size(), 1000);
+            if (a > 0)
+            {
+                for (int i = 0; i < fds.size(); i++)
+                {
+                    if (fds[i].revents & POLLIN)
+                    {
+                        char buf[512];
+                        memset(buf, 0, 100);
+                        int bytesRecv;
+                        while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
+                        {
+                            clients[i]->setLastActivity();
+                            prepareBuf(buf, i);
+                        }
+                        fds[i].revents = 0;
+                    }
+                }
+            }
+            ping();
+        }
     }
 
     void launchIrcServer(int port, std::string pass)
@@ -1044,43 +1109,9 @@ public:
             std::vector<struct pollfd> fds;
 
         signal(SIGINT, &sig);
-        // signal(SIGQUIT, &sig);
+        signal(SIGQUIT, &sig);
 
-        while (1)
-        {
-            socklen_t clientSize = sizeof(addr);
-            int clientSocket = accept(sock, (struct sockaddr*)&addr, &clientSize);
-            if (clientSocket >= 0)
-            {
-        		// char	host[INET_ADDRSTRLEN];/////
-	        	// inet_ntop(AF_INET, &(addr.sin_addr), host, INET_ADDRSTRLEN); ////
-
-                clients.push_back(new Client(clientSocket));
-                struct pollfd b;
-                b.fd = clientSocket;
-                b.events = POLLIN;
-                b.revents = 0;
-                fds.push_back(b);
-                std::cout << "new clientSocket = " << clientSocket << std::endl;
-            }
-
-            int a = poll(fds.data(), fds.size(), 1000);
-            if (a > 0)
-            {
-                for (int i = 0; i < fds.size(); i++)
-                {
-                    if (fds[i].revents & POLLIN)
-                    {
-                        char buf[512];
-                        memset(buf, 0, 100);
-                        int bytesRecv;
-                        while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
-                            prepareBuf(buf, i);
-                        fds[i].revents = 0;
-                    }
-                }
-            }
-        }
+        work(addr, fds);
     }
 
 };
