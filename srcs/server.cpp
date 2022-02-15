@@ -4,6 +4,7 @@ void irc::whichCmd(std::vector<std::string> cmd, int i)
 {
     if (cmd.size() == 0)
         return;
+    std::cout << "i = " << i << "; clients size = " << clients.size() << std::endl;
     if (!clients[i]->getIsAutorized())
         getRegistered(cmd, i);
     else
@@ -56,24 +57,36 @@ void irc::whichCmd(std::vector<std::string> cmd, int i)
 void irc::prepareBuf(char *buf, int i)
 {
     std::string tmp = buf;
-    if (tmp.size() == 1)
+    std::cout << buf << std::endl;
+    if (tmp.size() == 1 && remainder.empty())
         return;
-    unsigned long n;
-    std::string newBuf;
-    std::vector<std::string> cmd;
-    while ((n = tmp.find("\n")) != std::string::npos)
+    if (!remainder.empty())
     {
-        newBuf = tmp.substr(0, n);
-        tmp = tmp.substr(n + 1, tmp.size() - n);
-        if (newBuf[newBuf.size() - 1] == '\r')
-            newBuf.erase(newBuf.size() - 1);
-        cmd = splitString(newBuf);
-        whichCmd(cmd, i);           
+        tmp = remainder + tmp;
+        remainder.clear();
     }
-    if (tmp[tmp.size() - 1] == '\r')
-        tmp.erase(tmp.size() - 1);
-    cmd = splitString(tmp);
-    whichCmd(cmd, i); 
+    if (tmp.find("\n") == std::string::npos)
+        remainder = tmp;
+    else
+    {
+        unsigned long n;
+        std::string newBuf;
+        std::vector<std::string> cmd;
+        while ((n = tmp.find("\n")) != std::string::npos)
+        {
+            newBuf = tmp.substr(0, n);
+            tmp = tmp.substr(n + 1, tmp.size() - n);
+            if (newBuf[newBuf.size() - 1] == '\r')
+                newBuf.erase(newBuf.size() - 1);
+            cmd = splitString(newBuf);
+            whichCmd(cmd, i);           
+        }
+        if (tmp.size() > 1 && tmp[tmp.size() - 1] == '\r')
+            tmp.erase(tmp.size() - 1);
+        cmd = splitString(tmp);
+        whichCmd(cmd, i);
+        remainder.clear();
+    }
 }
 void irc::work(sockaddr_in addr, std::vector<struct pollfd> fds)
 {
@@ -92,7 +105,7 @@ void irc::work(sockaddr_in addr, std::vector<struct pollfd> fds)
             std::cout << "new clientSocket = " << clientSocket << std::endl;
         }
         int a = poll(fds.data(), fds.size(), 1000);
-        if (a > 0)
+        if (a != 0)
         {
             for (int i = 0; i < static_cast<int>(fds.size()); i++)
             {
@@ -103,7 +116,8 @@ void irc::work(sockaddr_in addr, std::vector<struct pollfd> fds)
                     int bytesRecv;
                     while ((bytesRecv = recv(fds[i].fd, buf, 100, 0) > 0))
                     {
-                        clients[i]->setLastActivity();
+                        if (i < static_cast<int>(clients.size()))
+                            clients[i]->setLastActivity();
                         prepareBuf(buf, i);
                     }
                     fds[i].revents = 0;

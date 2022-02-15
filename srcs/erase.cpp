@@ -3,8 +3,8 @@
 void irc::closeAndErase(int i)
 {
     close(clients[i]->clientSocket);
-    std::vector<Client*>::iterator it = clients.begin() + i;
-    clients.erase(it);
+    // std::vector<Client*>::iterator it = clients.begin() + i;
+    // clients.erase(it);
 }
 
 void irc::eraseAll()

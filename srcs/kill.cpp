@@ -29,7 +29,7 @@ void irc::kill(std::vector<std::string> cmd, int i)
         {
             (*it)->deleteFromAllChannels(channels);
             close((*it)->clientSocket);
-            clients.erase(it);
+            // clients.erase(it);
             return;
         }
         ++it;

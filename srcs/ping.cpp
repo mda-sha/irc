@@ -15,8 +15,8 @@ void irc::ping()
         {
             clients[index]->deleteFromAllChannels(channels);
             close(clients[index]->clientSocket);
-            std::vector<Client*>::iterator it = clients.begin() + index;
-            clients.erase(it);
+            // std::vector<Client*>::iterator it = clients.begin() + index;
+            // clients.erase(it);
         }
         ++index;
     }

@@ -33,6 +33,7 @@ private:
     std::string oper_password;
     int port;
     int sock;
+    std::string remainder;
 
 public:
 
