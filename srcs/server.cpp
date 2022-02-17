@@ -4,7 +4,6 @@ void irc::whichCmd(std::vector<std::string> cmd, int i)
 {
     if (cmd.size() == 0)
         return;
-    std::cout << "i = " << i << "; clients size = " << clients.size() << std::endl;
     if (!clients[i]->getIsAutorized())
         getRegistered(cmd, i);
     else
@@ -57,7 +56,6 @@ void irc::whichCmd(std::vector<std::string> cmd, int i)
 void irc::prepareBuf(char *buf, int i)
 {
     std::string tmp = buf;
-    std::cout << buf << std::endl;
     if (tmp.size() == 1 && remainder.empty())
         return;
     if (!remainder.empty())

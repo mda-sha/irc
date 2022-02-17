@@ -4,7 +4,7 @@ CPPFILES = $(addprefix ${SRCS_DIR}, ${FILES})
 OFILES = $(patsubst %.cpp,%.o,$(CPPFILES))
 DEPS = $(patsubst %.o,%.d,$(OFILES))
 DEPFLAGS = -MMD -MF $(@:.o=.d)
-FLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
+FLAGS = -Wall -Wextra -Werror -std=c++98
 NAME = ircserv
 
 all:	$(NAME)

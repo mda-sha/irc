@@ -55,7 +55,7 @@ void irc::privmsg(std::vector<std::string> cmd, int i, bool notice)
         if (*it_ind == -1)
         {
             std::string err = ":server 401 :No such nick/channel\n";
-            send(clients[i]->clientSocket, stringToSend.c_str(), stringToSend.size(), 0);
+            send(clients[i]->clientSocket, err.c_str(), err.size(), 0);
             ++it_ind;
             continue;
         }
